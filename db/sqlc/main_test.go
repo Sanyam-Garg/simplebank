@@ -18,16 +18,18 @@ const (
 )
 
 var testQueries *Queries
-
+var testDB *sql.DB
 // This is the main entry point for all tests in golang
 func TestMain(m *testing.M) {
-	conn, err := sql.Open(dbDriver, dbSource)
+	var err error
+	
+	testDB, err = sql.Open(dbDriver, dbSource)
 	if err != nil {
 		log.Fatal("Cannot connect to db:", err)
 	}
 
-	// If connection is successful, returns a DB or DBTX object.
-	testQueries = New(conn)
+	// If connection is successful, returns a DB object.
+	testQueries = New(testDB)
 
 	// m.Run() starts the main test and exits returning an exit code. The os.Exit then performs operations according to the code.
 	os.Exit(m.Run())
