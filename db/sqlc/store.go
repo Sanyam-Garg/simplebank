@@ -89,7 +89,9 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 			return err
 		}
 
-		// TODO: Update account balances.
+		// update account balances.
+		// Just getting the account and updating using the crud functions is not the correct way. The transactions running in different goroutines may fetch the accoutn without the balance being updated, leading to discrepencies
+		
 
 		return nil
 	})
