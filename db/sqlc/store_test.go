@@ -16,7 +16,7 @@ func TestTransferTx(t *testing.T) {
 	fmt.Println(">>before:", account1.Balance, account2.Balance)
 
 	// run n concurrent transactions
-	n := 5
+	n := 2
 	amount := int64(10)
 
 	// Make channels to receive error and results from each go routine
@@ -24,8 +24,11 @@ func TestTransferTx(t *testing.T) {
 	results := make(chan TransferTxResult)
 
 	for i := 0; i < n; i++ {
+		// Give names to transactions for debugging.
+		txName := fmt.Sprintf("tx: %d", i+1)
 		go func() {
-			result, err := store.TransferTx(context.Background(), TransferTxParams{
+			ctx := context.WithValue(context.Background(), txKey, txName)
+			result, err := store.TransferTx(ctx, TransferTxParams{
 				FromAccountID: account1.ID,
 				ToAccountID:   account2.ID,
 				Amount:        amount,
@@ -96,7 +99,7 @@ func TestTransferTx(t *testing.T) {
 		require.True(t, diff1%amount == 0)
 
 		// This k is basically the quotient on dividing the difference by the amount. Ideally, k should go like 1, 2, 3...
-		k := int(diff1 % amount)
+		k := int(diff1 / amount)
 		require.True(t, k >= 1 && k <= n)
 		require.NotContains(t, existed, k)
 		existed[k] = true
