@@ -101,19 +101,46 @@ func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (Trans
 		// Have to use isolation by adding 'FOR UPDATE' in sql query. But this leads to deadlock because of foreign key constraint.
 		// Have to tell postgres that pk will not be changed. Use 'NO KEY'
 		// fmt.Println(txName, "get account 1")
-
-		result.FromAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
-			ID: arg.FromAccountID,
-			Balance: -arg.Amount,
-		})
-
-		result.ToAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
-			ID: arg.ToAccountID,
-			Balance: arg.Amount,
-		})
+		// Now there still is a possibility of deadlock when two concurrent transactions are updating the balance of the same account.
+		// This happens when TX1 updates balance of account 1 first, and TX2 updates balance of account 2 first.
+		// Can fix this by executing queries in consistent order. In this case, account with a smaller id should always be updated first.
+		if arg.FromAccountID < arg.ToAccountID{
+			result.FromAccount, result.ToAccount, err = addMoney(ctx, q, arg.FromAccountID, -arg.Amount, arg.ToAccountID, arg.Amount)
+		} else{
+			result.ToAccount, result.FromAccount, err = addMoney(ctx, q, arg.ToAccountID, arg.Amount, arg.FromAccountID, -arg.Amount)
+		}
 
 		return nil
 	})
 
 	return result, err
+}
+
+func addMoney(
+	ctx context.Context,
+	q *Queries,
+	account1ID int64,
+	amount1 int64,
+	account2ID int64,
+	amount2 int64,
+) (account1 Account, account2 Account, err error){
+	account1, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID: account1ID,
+		Amount: amount1,
+	})
+
+	if err != nil{
+		return 
+	}
+
+	account2, err = q.AddAccountBalance(ctx, AddAccountBalanceParams{
+		ID: account2ID,
+		Amount: amount2,
+	})
+
+	if err != nil{
+		return 
+	}
+
+	return
 }
