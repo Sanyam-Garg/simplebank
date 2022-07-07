@@ -6,17 +6,21 @@ import (
 	"fmt"
 )
 
-// Create an empty object of type empty struct
-// var txKey = struct{}{}
+// Define an interface for testing API with mock DB
+type Store interface{
+	Querier
+	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+
 
 // This struct provides the functionality to execute individual queries as well as transactions.
-type Store struct {
+type SQLStore struct {
 	*Queries // The Queries struct defined in db.go provides the functionality to execute individual queries. Composition over inheritance
 	db       *sql.DB
 }
 
-func NewStore(db *sql.DB) *Store {
-	return &Store{
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{
 		db:      db,
 		Queries: New(db),
 	}
@@ -24,7 +28,7 @@ func NewStore(db *sql.DB) *Store {
 
 // Add function to generate database transaction
 // fn is callback function
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -58,7 +62,7 @@ type TransferTxResult struct {
 	ToEntry     Entries   `json:"to_entry"`
 }
 
-func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+func (store *SQLStore) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
 	var result TransferTxResult
 
 	err := store.execTx(ctx, func(q *Queries) error {
