@@ -6,6 +6,7 @@ import (
 
 	db "github.com/Sanyam-Garg/simplebankgo/db/sqlc"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
@@ -28,6 +29,13 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ctx, arg)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "foreign_key_violation", "unique_violation":
+				ctx.JSON(http.StatusForbidden, errResponse(err))
+				return
+			}
+		}
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
@@ -85,25 +93,25 @@ func (server *Server) listAccounts(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, accounts)
 }
 
-type updateAccountRequest struct{
-	ID int64 `json:"id" binding:"required,min=1"`
+type updateAccountRequest struct {
+	ID      int64 `json:"id" binding:"required,min=1"`
 	Balance int64 `json:"balance" binding:"required,min=0"`
 }
 
-func (server *Server) updateAccount(ctx *gin.Context){
+func (server *Server) updateAccount(ctx *gin.Context) {
 	var req updateAccountRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil{
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
 
 	args := db.UpdateAccountParams{
-		ID: req.ID,
+		ID:      req.ID,
 		Balance: req.Balance,
 	}
 
 	account, err := server.store.UpdateAccount(ctx, args)
-	if err != nil{
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errResponse(err))
 		return
 	}
