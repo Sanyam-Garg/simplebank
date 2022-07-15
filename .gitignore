@@ -1,2 +1,4 @@
 .vscode
 Simple bank.sql
+api/account_test.go
+api/main_test.go
