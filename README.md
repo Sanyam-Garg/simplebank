@@ -1,4 +1,4 @@
-# Simple Bank Service
+# Banking Service
 This is a REST API that contains endpoints for a bank.
 
 ## Tech Stack
